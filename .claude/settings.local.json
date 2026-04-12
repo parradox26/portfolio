@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nvm --version)",
+      "Bash(where node:*)"
+    ]
+  }
+}
