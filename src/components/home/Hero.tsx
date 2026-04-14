@@ -63,8 +63,16 @@ export default function Hero() {
   const [charIdx, setCharIdx] = useState(ROLES[0].length);
   const [deleting, setDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    fetch("/api/resume")
+      .then((r) => r.json())
+      .then((data) => { if (data.url) setResumeUrl(data.url); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!mounted) return;
@@ -182,19 +190,22 @@ export default function Hero() {
           >
             View Projects
           </a>
-          <a
-            href="/resume.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              border: "1px solid var(--border)",
-              color: "var(--text)",
-              background: "rgba(255,255,255,0.04)",
-            }}
-            className="px-6 py-2.5 rounded-lg font-semibold text-sm hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
-          >
-            Download Resume
-          </a>
+          {resumeUrl && (
+            <a
+              href={resumeUrl}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                border: "1px solid var(--border)",
+                color: "var(--text)",
+                background: "rgba(255,255,255,0.04)",
+              }}
+              className="px-6 py-2.5 rounded-lg font-semibold text-sm hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+            >
+              Download Resume
+            </a>
+          )}
         </div>
 
         {/* Azure cert badge */}

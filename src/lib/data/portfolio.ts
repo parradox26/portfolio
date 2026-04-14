@@ -78,7 +78,7 @@ export const experience = [
       },
       {
         name: "CubeSat Mission Control — Genmat-01",
-        period: "Jul 2023 – Ongoing",
+        period: "Jul 2023 – Dec 2024",
         team: 7,
         bullets: [
           "Directed TT&C mission control for Genmat-01 CubeSat — Python/Flask, FastAPI, PostgreSQL, MongoDB, Spring Boot/Orekit orbital APIs.",
