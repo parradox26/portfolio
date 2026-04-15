@@ -1,7 +1,41 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Nav from "@/components/Nav";
-import Link from "next/link";
+import ProjectHero from "@/components/projects/ProjectHero";
+import ProjectOverview from "@/components/projects/ProjectOverview";
+import ProjectMetrics from "@/components/projects/ProjectMetrics";
+import ArchitectureDiagram from "@/components/projects/ArchitectureDiagram";
+import DemoTransition from "@/components/projects/DemoTransition";
+import ProjectNav from "@/components/projects/ProjectNav";
+import { projectDetails, PROJECT_NAV_ORDER } from "@/lib/data/portfolio";
+
+const DAILY_LIMIT = 5;
+const LS_KEY = "loan_genie_usage";
+
+function getTodayStr() {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+function getUsage(): { count: number; date: string } {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { count: 0, date: getTodayStr() };
+}
+
+function incrementUsage(): number {
+  const today = getTodayStr();
+  const u = getUsage();
+  const newCount = u.date === today ? u.count + 1 : 1;
+  localStorage.setItem(LS_KEY, JSON.stringify({ count: newCount, date: today }));
+  return newCount;
+}
+
+const detail = projectDetails["loan-genie"];
+const navIdx = PROJECT_NAV_ORDER.findIndex((p) => p.slug === "loan-genie");
+const prevProject = navIdx > 0 ? PROJECT_NAV_ORDER[navIdx - 1] : undefined;
+const nextProject = navIdx < PROJECT_NAV_ORDER.length - 1 ? PROJECT_NAV_ORDER[navIdx + 1] : undefined;
 
 const PURPOSES = ["Home Purchase", "Car Loan", "Personal Loan", "Business Expansion", "Debt Consolidation", "Education", "Medical"];
 
@@ -40,9 +74,20 @@ export default function LoanGeniePage() {
   const [result, setResult] = useState<LoanResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [usesLeft, setUsesLeft] = useState(DAILY_LIMIT);
+
+  useEffect(() => {
+    const u = getUsage();
+    const remaining = u.date === getTodayStr() ? Math.max(0, DAILY_LIMIT - u.count) : DAILY_LIMIT;
+    setUsesLeft(remaining);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (usesLeft <= 0) {
+      setError("Daily limit reached (5/day). Come back tomorrow!");
+      return;
+    }
     setLoading(true);
     setError("");
     setResult(null);
@@ -60,10 +105,16 @@ export default function LoanGeniePage() {
           existingDebt: parseInt(form.existingDebt),
         }),
       });
+      if (res.status === 429) {
+        setError("Too many requests. Please try again later.");
+        return;
+      }
       if (!res.ok) throw new Error("API error");
+      const newCount = incrementUsage();
+      setUsesLeft(Math.max(0, DAILY_LIMIT - newCount));
       setResult(await res.json());
     } catch {
-      setError("Scoring failed. Make sure ANTHROPIC_API_KEY is set in .env.local");
+      setError("Scoring failed. Make sure GROQ_API_KEY is set in .env.local");
     } finally {
       setLoading(false);
     }
@@ -96,14 +147,36 @@ export default function LoanGeniePage() {
   return (
     <>
       <Nav />
-      <div className="pt-12" style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      <ProjectHero
+        name={detail.name}
+        icon={detail.icon}
+        tagline={detail.tagline}
+        year={detail.year}
+        role={detail.role}
+        techStack={detail.techStack}
+        metricsSummary={detail.metrics.map((m) => ({ label: m.label, value: m.value }))}
+        demoLabel="Live AI Scorer"
+      />
+      <ProjectOverview paragraphs={detail.overview} />
+      <ProjectMetrics metrics={detail.metrics} />
+      <ArchitectureDiagram nodes={detail.architecture.nodes} edges={detail.architecture.edges} />
+      <DemoTransition label="Live AI Risk Scorer" />
+      <div style={{ background: "var(--bg)" }}>
         <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
           className="flex items-center justify-between px-6 py-3">
           <div>
-            <h1 style={{ color: "var(--text)" }} className="font-bold text-lg">💰 Loan Genie</h1>
-            <p style={{ color: "var(--muted)" }} className="text-xs font-mono">Powered by Claude · instant risk assessment</p>
+            <h2 style={{ color: "var(--text)" }} className="font-bold text-base">💰 Loan Genie — AI Risk Scorer</h2>
+            <p style={{ color: "var(--muted)" }} className="text-xs font-mono">Powered by Groq · instant risk assessment</p>
           </div>
-          <Link href="/" style={{ color: "var(--muted)" }} className="text-xs hover:text-white">← Back</Link>
+          <div className="flex items-center gap-3">
+            <span style={{ color: "var(--muted)" }} className="text-xs font-mono">Llama 3.3 70B</span>
+            <span
+              style={{ color: usesLeft <= 1 ? "var(--amber)" : "var(--muted)", border: "1px solid var(--border)", background: "var(--surface2)" }}
+              className="text-[11px] font-mono px-2 py-0.5 rounded"
+            >
+              {usesLeft}/{DAILY_LIMIT} today
+            </span>
+          </div>
         </div>
 
         <div className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -124,12 +197,20 @@ export default function LoanGeniePage() {
             {field("Monthly Existing Debt ($)", "existingDebt", "number")}
             <button
               type="submit"
-              disabled={loading}
-              style={{ background: "var(--accent)", color: "#050a14" }}
+              disabled={loading || usesLeft <= 0}
+              style={{ background: usesLeft <= 0 ? "var(--surface2)" : "var(--accent)", color: usesLeft <= 0 ? "var(--muted)" : "#050a14" }}
               className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-60"
             >
-              {loading ? "Analysing with Claude..." : "Score Application →"}
+              {loading ? "Analysing with Groq..." : usesLeft <= 0 ? "Daily limit reached" : "Score Application →"}
             </button>
+            <div className="flex items-center justify-between">
+              <span style={{ color: usesLeft <= 1 ? "var(--amber)" : "var(--muted)" }} className="text-[11px] font-mono">
+                {usesLeft} / {DAILY_LIMIT} free uses remaining today
+              </span>
+              {usesLeft <= 0 && (
+                <span style={{ color: "var(--muted)" }} className="text-[11px] font-mono">resets at midnight</span>
+              )}
+            </div>
             {error && <p style={{ color: "var(--red)" }} className="text-xs font-mono">{error}</p>}
           </form>
 
@@ -148,7 +229,7 @@ export default function LoanGeniePage() {
                 className="rounded-xl p-8 text-center h-full flex items-center justify-center">
                 <div>
                   <div className="text-4xl mb-3 animate-spin">⚙️</div>
-                  <p style={{ color: "var(--muted)" }} className="text-sm font-mono">Claude is evaluating...</p>
+                  <p style={{ color: "var(--muted)" }} className="text-sm font-mono">Groq is evaluating...</p>
                 </div>
               </div>
             )}
@@ -216,6 +297,10 @@ export default function LoanGeniePage() {
           </div>
         </div>
       </div>
+      <ProjectNav
+        prev={prevProject ? { name: prevProject.name, href: prevProject.href, icon: prevProject.icon } : undefined}
+        next={nextProject ? { name: nextProject.name, href: nextProject.href, icon: nextProject.icon } : undefined}
+      />
     </>
   );
 }

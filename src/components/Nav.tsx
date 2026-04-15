@@ -4,13 +4,12 @@ import { usePathname } from "next/navigation";
 
 const links = [
   { href: "/", label: "Home" },
-  { href: "/projects/satellite", label: "Satellite" },
   { href: "/projects/library", label: "Library SaaS" },
+  { href: "/projects/cubesat", label: "CubeSat" },
   { href: "/projects/loan-genie", label: "Loan Genie" },
-  { href: "/projects/city-iot", label: "City IoT" },
   { href: "/projects/golden-batch", label: "Golden Batch" },
-  { href: "/projects/certificate", label: "Certificates" },
-  { href: "/projects/rfid", label: "RFID Warehouse" },
+  { href: "/projects/city-iot", label: "City IoT" },
+  { href: "/projects/demand-forecasting", label: "Forecasting" },
 ];
 
 export default function Nav() {

@@ -26,6 +26,15 @@ const nextConfig: NextConfig = {
         path: emptyShim,
         url: emptyShim,
       };
+
+      // The satellite.js pthreads WASM runtime (em-pthread) creates a circular
+      // chunk dependency that webpack can't hash. It's a Node.js-only worker
+      // runtime — never used in the browser. Alias it to the empty shim so
+      // webpack excludes the entire pthreads chunk from the client bundle.
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        [path.resolve("node_modules/satellite.js/wasm-build/pthreads-release/index.js")]: emptyShim,
+      };
     }
     return config;
   },

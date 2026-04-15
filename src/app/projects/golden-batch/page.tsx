@@ -1,7 +1,18 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
-import Link from "next/link";
+import ProjectHero from "@/components/projects/ProjectHero";
+import ProjectOverview from "@/components/projects/ProjectOverview";
+import ProjectMetrics from "@/components/projects/ProjectMetrics";
+import ArchitectureDiagram from "@/components/projects/ArchitectureDiagram";
+import DemoTransition from "@/components/projects/DemoTransition";
+import ProjectNav from "@/components/projects/ProjectNav";
+import { projectDetails, PROJECT_NAV_ORDER } from "@/lib/data/portfolio";
+
+const detail = projectDetails["golden-batch"];
+const navIdx = PROJECT_NAV_ORDER.findIndex((p) => p.slug === "golden-batch");
+const prevProject = navIdx > 0 ? PROJECT_NAV_ORDER[navIdx - 1] : undefined;
+const nextProject = navIdx < PROJECT_NAV_ORDER.length - 1 ? PROJECT_NAV_ORDER[navIdx + 1] : undefined;
 
 // Golden Batch: find optimal (temp, pressure, viscosity) for max yield
 function yieldFn(temp: number, pressure: number, viscosity: number): number {
@@ -140,99 +151,23 @@ export default function GoldenBatchPage() {
   return (
     <>
       <Nav />
-      <div className="pt-12" style={{ minHeight: "100vh", background: "var(--bg)" }}>
-        <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
-          className="flex items-center justify-between px-6 py-3">
-          <div>
-            <h1 style={{ color: "var(--text)" }} className="font-bold text-lg">⚗️ Golden Batch Analytics</h1>
-            <p style={{ color: "var(--muted)" }} className="text-xs font-mono">Simulated annealing · 3D parameter space · live yield surface</p>
-          </div>
-          <Link href="/" style={{ color: "var(--muted)" }} className="text-xs hover:text-white">← Back</Link>
-        </div>
-
-        <div className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Canvas — yield surface */}
-          <div className="lg:col-span-2">
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)" }} className="rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span style={{ color: "var(--text)" }} className="text-sm font-semibold">Yield Surface (Temp × Pressure)</span>
-                <span style={{ color: "var(--muted)" }} className="text-xs font-mono">viscosity fixed at {params.viscosity}°</span>
-              </div>
-              <canvas ref={canvasRef} width={600} height={320} className="w-full rounded" />
-              <div className="flex gap-4 mt-2 text-xs font-mono" style={{ color: "var(--muted)" }}>
-                <span>X axis: Temperature (80–280 °C)</span>
-                <span>Y axis: Pressure (2–12 bar)</span>
-                <span style={{ color: "#00d4ff" }}>● current</span>
-                <span style={{ color: "#f59e0b" }}>● best</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Controls & stats */}
-          <div className="space-y-4">
-            {/* Current yield */}
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)" }} className="rounded-xl p-4">
-              <div style={{ color: "var(--muted)" }} className="text-xs font-mono mb-1">Current Yield</div>
-              <div style={{ color: "var(--accent)" }} className="text-4xl font-bold font-mono">
-                {currentYield.toFixed(1)}%
-              </div>
-              {best && (
-                <div style={{ color: "var(--green)" }} className="text-xs font-mono mt-1">
-                  Best: {best.yield.toFixed(1)}% (step {best.step})
-                </div>
-              )}
-            </div>
-
-            {/* Parameters */}
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)" }} className="rounded-xl p-4 space-y-3">
-              <div style={{ color: "var(--text)" }} className="text-sm font-semibold">Parameters</div>
-              {[
-                { label: "Temperature (°C)", key: "temp" as const, min: 80, max: 280 },
-                { label: "Pressure (bar)", key: "pressure" as const, min: 2, max: 12, step: 0.1 },
-                { label: "Viscosity (cP)", key: "viscosity" as const, min: 10, max: 80 },
-              ].map((p) => (
-                <div key={p.key}>
-                  <div className="flex justify-between text-xs font-mono mb-1">
-                    <span style={{ color: "var(--muted)" }}>{p.label}</span>
-                    <span style={{ color: "var(--accent)" }}>{params[p.key]}</span>
-                  </div>
-                  <input
-                    type="range" min={p.min} max={p.max} step={p.step ?? 1}
-                    value={params[p.key]}
-                    onChange={(e) => setParams((prev) => ({ ...prev, [p.key]: parseFloat(e.target.value) }))}
-                    className="w-full accent-cyan-400"
-                    disabled={running}
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* SA stats */}
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)" }} className="rounded-xl p-4 text-xs font-mono">
-              <div style={{ color: "var(--text)" }} className="font-semibold mb-2">Annealing Status</div>
-              <div className="space-y-1" style={{ color: "var(--muted)" }}>
-                <div>SA Temperature: <span style={{ color: "var(--amber)" }}>{temp_sa}</span></div>
-                <div>Explored: <span style={{ color: "var(--accent)" }}>{history.length}</span> candidates</div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                if (!running) {
-                  setHistory([]);
-                  setBest(null);
-                  setTempSA(1.0);
-                }
-                setRunning((r) => !r);
-              }}
-              style={{ background: running ? "var(--red)" : "var(--accent)", color: running ? "#fff" : "#050a14" }}
-              className="w-full py-2.5 rounded-lg font-semibold text-sm"
-            >
-              {running ? "⏹ Stop Search" : "▶ Run Optimisation"}
-            </button>
-          </div>
-        </div>
-      </div>
+      <ProjectHero
+        name={detail.name}
+        icon={detail.icon}
+        tagline={detail.tagline}
+        year={detail.year}
+        role={detail.role}
+        techStack={detail.techStack}
+        metricsSummary={detail.metrics.map((m) => ({ label: m.label, value: m.value }))}
+        demoLabel="Live Optimiser"
+      />
+      <ProjectOverview paragraphs={detail.overview} />
+      <ProjectMetrics metrics={detail.metrics} />
+      <ArchitectureDiagram nodes={detail.architecture.nodes} edges={detail.architecture.edges} />      
+      <ProjectNav
+        prev={prevProject ? { name: prevProject.name, href: prevProject.href, icon: prevProject.icon } : undefined}
+        next={nextProject ? { name: nextProject.name, href: nextProject.href, icon: nextProject.icon } : undefined}
+      />
     </>
   );
 }

@@ -90,6 +90,7 @@ function ProjectCard({
                 href={project.link}
                 style={{ background: "var(--accent)", color: "#050a14" }}
                 className="self-start flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
               >
                 View Project
                 <ExternalLink size={14} />
@@ -151,6 +152,61 @@ function ProjectCard({
   }
 
   // Standard card
+  const cardInner = (
+    <div
+      style={{
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        height: "100%",
+        transition: "border-color 0.2s, transform 0.2s, box-shadow 0.2s",
+        cursor: project.link ? "pointer" : "default",
+      }}
+      className="rounded-xl p-5 flex flex-col gap-3 group hover:scale-[1.015]"
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.borderColor = pal.border;
+        el.style.boxShadow = `0 0 20px ${pal.bg}`;
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.borderColor = "var(--border)";
+        el.style.boxShadow = "none";
+      }}
+    >
+      <h3 style={{ color: "var(--text)" }} className="font-semibold text-base leading-tight">
+        {project.name}
+      </h3>
+      <p style={{ color: "var(--muted)", lineHeight: 1.65 }} className="text-sm flex-1">
+        {project.description}
+      </p>
+      <div className="flex flex-wrap gap-1.5 mt-1">
+        {project.tags.map((tag, ti) => {
+          const p = tagStyle(ti + index);
+          return (
+            <span
+              key={tag}
+              style={{ background: p.bg, color: p.text, border: `1px solid ${p.border}`, fontSize: 10, fontFamily: "var(--font-geist-mono)" }}
+              className="px-2 py-0.5 rounded-full"
+            >
+              {tag}
+            </span>
+          );
+        })}
+      </div>
+      <div className="mt-auto pt-2">
+        {project.link ? (
+          <span style={{ color: "var(--accent)" }} className="inline-flex items-center gap-1 text-xs font-mono">
+            View Project <ArrowUpRight size={12} />
+          </span>
+        ) : (
+          <span style={{ color: "var(--muted)" }} className="inline-flex items-center gap-1 text-xs font-mono">
+            Case Study
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div
       ref={ref}
@@ -160,61 +216,13 @@ function ProjectCard({
         transition: `opacity 0.6s ease ${(index % 3) * 0.1}s, transform 0.6s ease ${(index % 3) * 0.1}s`,
       }}
     >
-      <div
-        style={{
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          height: "100%",
-          transition: "border-color 0.2s, transform 0.2s, box-shadow 0.2s",
-        }}
-        className="rounded-xl p-5 flex flex-col gap-3 group hover:scale-[1.015]"
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLElement;
-          el.style.borderColor = pal.border;
-          el.style.boxShadow = `0 0 20px ${pal.bg}`;
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLElement;
-          el.style.borderColor = "var(--border)";
-          el.style.boxShadow = "none";
-        }}
-      >
-        <h3 style={{ color: "var(--text)" }} className="font-semibold text-base leading-tight">
-          {project.name}
-        </h3>
-        <p style={{ color: "var(--muted)", lineHeight: 1.65 }} className="text-sm flex-1">
-          {project.description}
-        </p>
-        <div className="flex flex-wrap gap-1.5 mt-1">
-          {project.tags.map((tag, ti) => {
-            const p = tagStyle(ti + index);
-            return (
-              <span
-                key={tag}
-                style={{ background: p.bg, color: p.text, border: `1px solid ${p.border}`, fontSize: 10, fontFamily: "var(--font-geist-mono)" }}
-                className="px-2 py-0.5 rounded-full"
-              >
-                {tag}
-              </span>
-            );
-          })}
-        </div>
-        <div className="mt-auto pt-2">
-          {project.link ? (
-            <Link
-              href={project.link}
-              style={{ color: "var(--accent)" }}
-              className="inline-flex items-center gap-1 text-xs font-mono hover:underline"
-            >
-              View Project <ArrowUpRight size={12} />
-            </Link>
-          ) : (
-            <span style={{ color: "var(--muted)" }} className="inline-flex items-center gap-1 text-xs font-mono">
-              Case Study
-            </span>
-          )}
-        </div>
-      </div>
+      {project.link ? (
+        <Link href={project.link} style={{ display: "block", height: "100%" }}>
+          {cardInner}
+        </Link>
+      ) : (
+        cardInner
+      )}
     </div>
   );
 }
