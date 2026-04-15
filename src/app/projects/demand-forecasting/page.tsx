@@ -13,6 +13,7 @@ import {
   ReferenceLine, ResponsiveContainer, Area, AreaChart, ComposedChart, ReferenceArea,
 } from "recharts";
 
+type ForecastModel = "lgbm" | "tft";
 const detail = projectDetails["demand-forecasting"];
 const navIdx = PROJECT_NAV_ORDER.findIndex((p) => p.slug === "demand-forecasting");
 const prevProject = navIdx > 0 ? PROJECT_NAV_ORDER[navIdx - 1] : undefined;
@@ -45,7 +46,7 @@ function genHistorical(sku: 0 | 1 | 2, week: number): number {
   return Math.round(200 + seed(week * 13 + 4) * 800);
 }
 
-function genForecast(sku: 0 | 1 | 2, week: number, model: "lgbm" | "tft"): { value: number; lo: number; hi: number } {
+function genForecast(sku: 0 | 1 | 2, week: number, model: ForecastModel): { value: number; lo: number; hi: number } {
   const actual = genHistorical(sku, week);
   if (model === "lgbm") {
     const bias = sku === 0 ? (seed(week * 5 + 10) - 0.3) * 250 : (seed(week * 5 + 10) - 0.5) * 120;
@@ -215,21 +216,21 @@ export default function DemandForecastingPage() {
                 label: "SMAPE",
                 lgbm: `${lgbmSmape}%`,
                 tft: `${tftSmape}%`,
-                winner: "tft" as const,
+                winner: "tft" as ForecastModel,
                 detail: "Symmetric Mean Absolute Percentage Error (lower is better)",
               },
               {
                 label: "CI Width (avg)",
                 lgbm: `±${lgbmCiWidth}`,
                 tft: `±${tftCiWidth}`,
-                winner: "tft" as const,
+                winner: "tft" as ForecastModel,
                 detail: "Average confidence interval width (tighter = more useful)",
               },
               {
                 label: "Stockout events",
                 lgbm: `${stockoutsLgbm}`,
                 tft: `${stockoutsTft}`,
-                winner: "tft" as const,
+                winner: "tft" as ForecastModel,
                 detail: "Weeks where forecast significantly undershot demand",
               },
             ].map(({ label, lgbm, tft, winner, detail }) => (
