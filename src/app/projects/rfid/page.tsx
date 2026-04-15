@@ -1,7 +1,21 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
-import Link from "next/link";
+import ProjectDetailSection from "@/components/ProjectDetailSection";
+
+const PROJECT = {
+  icon: "📦",
+  description: "Offline-first Android warehouse management system with Realm DB — RFID, NFC, and barcode scanning on weak-connection devices with automatic conflict-resolution sync to MongoDB.",
+  highlights: [
+    "Offline-first architecture with Realm DB — full functionality in dead-zone warehouse environments",
+    "RFID, NFC, and barcode scanning with WebSocket real-time sync back to MongoDB on reconnect",
+    "Delivered across full mobile SDLC for a 10-person team on Android/Kotlin and React Native",
+  ],
+  tags: ["Kotlin", "Realm DB", "MongoDB", "WebSocket", "React Native", "Android"],
+  period: "Oct 2022 – Apr 2023",
+  role: "Senior Technical Staff Member",
+  team: 10,
+};
 
 type ItemStatus = "in_stock" | "checked_out" | "missing" | "quarantine";
 
@@ -78,7 +92,7 @@ export default function RFIDPage() {
         const newStatus = actions[Math.floor(Math.random() * actions.length)];
         const updated = prev.map((it, i) => i === idx ? { ...it, status: newStatus, lastScan: Date.now(), synced: false } : it);
         const ev: ScanEvent = {
-          id: `ev-${Date.now()}`,
+          id: `ev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           itemId: item.id,
           sku: item.sku,
           action: newStatus === "checked_out" ? "CHECKOUT" : "RETURN",
@@ -115,11 +129,22 @@ export default function RFIDPage() {
   return (
     <>
       <Nav />
-      <div className="pt-12" style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      <ProjectDetailSection
+        name="RFID Warehouse System"
+        icon={PROJECT.icon}
+        description={PROJECT.description}
+        highlights={PROJECT.highlights}
+        tags={PROJECT.tags}
+        period={PROJECT.period}
+        role={PROJECT.role}
+        team={PROJECT.team}
+        demoLabel="Live Warehouse Sim"
+      />
+      <div style={{ background: "var(--bg)" }}>
         <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
           className="flex items-center justify-between px-6 py-3">
           <div>
-            <h1 style={{ color: "var(--text)" }} className="font-bold text-lg">📦 RFID Warehouse Management System</h1>
+            <h2 style={{ color: "var(--text)" }} className="font-bold text-base">📦 RFID Warehouse Management System</h2>
             <p style={{ color: "var(--muted)" }} className="text-xs font-mono">Scans queue offline · auto-sync on reconnect</p>
           </div>
           <div className="flex gap-3 items-center">
@@ -137,7 +162,6 @@ export default function RFIDPage() {
             >
               {scanning ? "⏸ Pause RFID" : "▶ Start RFID"}
             </button>
-            <Link href="/" style={{ color: "var(--muted)" }} className="text-xs hover:text-white">← Back</Link>
           </div>
         </div>
 
