@@ -5,7 +5,6 @@ import { feature, mesh } from "topojson-client";
 import type { Topology, Objects } from "topojson-specification";
 import { TLES } from "@/lib/data/tles";
 
-// Pre-parse satrecords once
 const SATRECORDS = TLES.map((tle) => ({
   ...tle,
   satrec: satellite.twoline2satrec(tle.line1, tle.line2),
@@ -14,17 +13,17 @@ const SATRECORDS = TLES.map((tle) => ({
 // ── Projection helpers ──────────────────────────────────────────
 const lonToX = (lon: number, W: number) => ((lon + 180) / 360) * W;
 const latToY = (lat: number, H: number) => ((90 - lat) / 180) * H;
+const xToLon = (x: number, W: number) => (x / W) * 360 - 180;
+const yToLat = (y: number, H: number) => 90 - (y / H) * 180;
 
-// ── Draw GeoJSON geometry onto ctx ─────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function geoPath(ctx: CanvasRenderingContext2D, geom: any, W: number, H: number) {
   if (!geom) return;
   const type: string = geom.type;
-  // Collect rings / line-strings into a uniform shape
   let ringGroups: number[][][] = [];
-  if (type === "Polygon")            ringGroups = geom.coordinates;
-  else if (type === "MultiPolygon")  geom.coordinates.forEach((p: number[][][]) => p.forEach((r) => ringGroups.push(r)));
-  else if (type === "LineString")    ringGroups = [geom.coordinates];
+  if (type === "Polygon")             ringGroups = geom.coordinates;
+  else if (type === "MultiPolygon")   geom.coordinates.forEach((p: number[][][]) => p.forEach((r) => ringGroups.push(r)));
+  else if (type === "LineString")     ringGroups = [geom.coordinates];
   else if (type === "MultiLineString") ringGroups = geom.coordinates;
   else if (type === "GeometryCollection")
     geom.geometries.forEach((g: unknown) => geoPath(ctx, g, W, H));
@@ -34,7 +33,6 @@ function geoPath(ctx: CanvasRenderingContext2D, geom: any, W: number, H: number)
     let first = true;
     for (const coord of ring) {
       const lon = coord[0], lat = coord[1];
-      // Break path at anti-meridian to avoid lines shooting across the map
       if (prevLon !== null && Math.abs(lon - prevLon) > 180) first = true;
       const x = lonToX(lon, W), y = latToY(lat, H);
       if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
@@ -43,17 +41,14 @@ function geoPath(ctx: CanvasRenderingContext2D, geom: any, W: number, H: number)
   }
 }
 
-// ── Offscreen world canvas (pre-rendered, reused every frame) ──
 function buildWorldCanvas(W: number, H: number, topology: Topology<Objects>): HTMLCanvasElement {
   const off = document.createElement("canvas");
   off.width = W; off.height = H;
   const ctx = off.getContext("2d")!;
 
-  // Background
   ctx.fillStyle = "#050a14";
   ctx.fillRect(0, 0, W, H);
 
-  // ── Grid ──────────────────────────────────────────────────────
   ctx.lineWidth = 0.4;
   ctx.strokeStyle = "rgba(30,58,95,0.4)";
   ctx.setLineDash([]);
@@ -66,13 +61,11 @@ function buildWorldCanvas(W: number, H: number, topology: Topology<Objects>): HT
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
   }
 
-  // Equator
   ctx.strokeStyle = "rgba(0,212,255,0.15)";
   ctx.lineWidth = 0.8;
   const eqY = latToY(0, H);
   ctx.beginPath(); ctx.moveTo(0, eqY); ctx.lineTo(W, eqY); ctx.stroke();
 
-  // Tropics
   ctx.strokeStyle = "rgba(30,58,95,0.55)";
   ctx.lineWidth = 0.4;
   ctx.setLineDash([4, 5]);
@@ -82,18 +75,12 @@ function buildWorldCanvas(W: number, H: number, topology: Topology<Objects>): HT
   });
   ctx.setLineDash([]);
 
-  // ── Land fill ──────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const landFeature = feature(topology, (topology.objects as any).land);
   ctx.beginPath();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (landFeature as any).coordinates?.forEach((poly: number[][][]) =>
-    poly.forEach((ring) => geoPath(ctx, { type: "LineString", coordinates: ring }, W, H))
-  );
   if ((landFeature as { type: string }).type === "Feature") {
     geoPath(ctx, (landFeature as { geometry: unknown }).geometry, W, H);
   } else {
-    // FeatureCollection
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (landFeature as any).features?.forEach((f: { geometry: unknown }) =>
       geoPath(ctx, f.geometry, W, H)
@@ -102,7 +89,6 @@ function buildWorldCanvas(W: number, H: number, topology: Topology<Objects>): HT
   ctx.fillStyle = "rgba(18,44,70,0.75)";
   ctx.fill();
 
-  // ── Country borders ────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const borders = mesh(topology, (topology.objects as any).countries, (a: unknown, b: unknown) => a !== b);
   ctx.beginPath();
@@ -111,7 +97,6 @@ function buildWorldCanvas(W: number, H: number, topology: Topology<Objects>): HT
   ctx.lineWidth = 0.4;
   ctx.stroke();
 
-  // ── Degree labels ──────────────────────────────────────────────
   ctx.font = `${Math.max(9, Math.min(10, W * 0.011))}px monospace`;
   ctx.fillStyle = "rgba(100,116,139,0.55)";
   for (let lon = -150; lon <= 180; lon += 30) {
@@ -126,7 +111,7 @@ function buildWorldCanvas(W: number, H: number, topology: Topology<Objects>): HT
   return off;
 }
 
-// ── Track computation ──────────────────────────────────────────
+// ── Track computation ───────────────────────────────────────────
 type TrackPoint = { x: number; y: number; past: boolean; _lon: number };
 
 function computeTrack(
@@ -160,25 +145,68 @@ function splitAtMeridian(pts: TrackPoint[]): TrackPoint[][] {
   return segs.filter((s) => s.length >= 2);
 }
 
-// ── Component ──────────────────────────────────────────────────
+// ── AOI / next-pass helpers ─────────────────────────────────────
+interface Aoi { lat1: number; lon1: number; lat2: number; lon2: number }
+
+function computeNextPass(
+  satrec: ReturnType<typeof satellite.twoline2satrec>,
+  aoi: Aoi,
+  now: Date
+): number | null {
+  const minLat = Math.min(aoi.lat1, aoi.lat2);
+  const maxLat = Math.max(aoi.lat1, aoi.lat2);
+  const minLon = Math.min(aoi.lon1, aoi.lon2);
+  const maxLon = Math.max(aoi.lon1, aoi.lon2);
+  for (let m = 1; m <= 24 * 60; m++) {
+    const t = new Date(now.getTime() + m * 60_000);
+    try {
+      const pv = satellite.propagate(satrec, t);
+      if (!pv || typeof pv.position === "boolean" || !pv.position) continue;
+      const gmst = satellite.gstime(t);
+      const gd   = satellite.eciToGeodetic(pv.position, gmst);
+      const lat  = satellite.degreesLat(gd.latitude);
+      const lon  = satellite.degreesLong(gd.longitude);
+      if (lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon) return m;
+    } catch { /**/ }
+  }
+  return null;
+}
+
+function fmtMinutes(min: number): string {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+// ── Component ───────────────────────────────────────────────────
 export default function SatelliteTracker2D() {
-  const containerRef   = useRef<HTMLDivElement>(null);
-  const canvasRef      = useRef<HTMLCanvasElement>(null);
-  const animRef        = useRef<number>(0);
-  const worldRef       = useRef<HTMLCanvasElement | null>(null);
-  const trackCacheRef  = useRef<{ ts: number; pts: TrackPoint[] } | null>(null);
-  const selectedRef    = useRef(0);
+  const containerRef  = useRef<HTMLDivElement>(null);
+  const canvasRef     = useRef<HTMLCanvasElement>(null);
+  const animRef       = useRef<number>(0);
+  const worldRef      = useRef<HTMLCanvasElement | null>(null);
+  const trackCacheRef = useRef<{ ts: number; pts: TrackPoint[] } | null>(null);
+  const selectedRef   = useRef(0);
+
+  // AOI drawing refs (used inside stable rAF closure)
+  const drawModeRef   = useRef(false);
+  const aoiRef        = useRef<Aoi | null>(null);
+  const dragStartRef  = useRef<{ x: number; y: number } | null>(null);
+  const dragCurRef    = useRef<{ x: number; y: number } | null>(null);
 
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [info, setInfo] = useState<{
     lat: number; lon: number; alt: number; name: string; type: string; color: string;
   } | null>(null);
+  const [drawMode, setDrawMode] = useState(false);
+  const [aoi, setAoi] = useState<(Aoi & { nextPassMin: number | null }) | null>(null);
 
-  // Keep ref in sync (used inside rAF closure without re-subscribing)
   useEffect(() => {
     selectedRef.current = selectedIdx;
     trackCacheRef.current = null;
   }, [selectedIdx]);
+
+  // Keep drawMode ref in sync
+  useEffect(() => { drawModeRef.current = drawMode; }, [drawMode]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -190,10 +218,8 @@ export default function SatelliteTracker2D() {
     const now = new Date();
     const rec = SATRECORDS[selectedRef.current];
 
-    // Blit pre-rendered world map
     ctx.drawImage(worldRef.current, 0, 0);
 
-    // Recompute track every 10 s or on satellite change
     if (!trackCacheRef.current || now.getTime() - trackCacheRef.current.ts > 10_000) {
       trackCacheRef.current = { ts: now.getTime(), pts: computeTrack(rec.satrec, now, W, H) };
     }
@@ -204,7 +230,6 @@ export default function SatelliteTracker2D() {
     segments.forEach((seg) => {
       const past   = seg.filter((p) => p.past);
       const future = seg.filter((p) => !p.past);
-
       if (past.length >= 2) {
         ctx.beginPath();
         past.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
@@ -222,7 +247,40 @@ export default function SatelliteTracker2D() {
       }
     });
 
-    // ── Current position ─────────────────────────────────────────
+    // ── AOI (finalized) ──────────────────────────────────────────
+    const currentAoi = aoiRef.current;
+    if (currentAoi) {
+      const ax1 = lonToX(currentAoi.lon1, W), ay1 = latToY(currentAoi.lat1, H);
+      const ax2 = lonToX(currentAoi.lon2, W), ay2 = latToY(currentAoi.lat2, H);
+      const rx = Math.min(ax1, ax2), ry = Math.min(ay1, ay2);
+      const rw = Math.abs(ax2 - ax1),  rh = Math.abs(ay2 - ay1);
+      ctx.fillStyle   = "rgba(0,212,255,0.07)";
+      ctx.fillRect(rx, ry, rw, rh);
+      ctx.strokeStyle = "#00d4ff";
+      ctx.lineWidth   = 1.5;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeRect(rx, ry, rw, rh);
+      ctx.setLineDash([]);
+      ctx.font      = "bold 10px monospace";
+      ctx.fillStyle = "#00d4ff";
+      ctx.fillText("AOI", rx + 4, ry + 12);
+    }
+
+    // ── Live drag rectangle ──────────────────────────────────────
+    const ds = dragStartRef.current, dc = dragCurRef.current;
+    if (ds && dc) {
+      const rx = Math.min(ds.x, dc.x), ry = Math.min(ds.y, dc.y);
+      const rw = Math.abs(dc.x - ds.x),  rh = Math.abs(dc.y - ds.y);
+      ctx.fillStyle   = "rgba(0,212,255,0.05)";
+      ctx.fillRect(rx, ry, rw, rh);
+      ctx.strokeStyle = "rgba(0,212,255,0.65)";
+      ctx.lineWidth   = 1.2;
+      ctx.setLineDash([5, 4]);
+      ctx.strokeRect(rx, ry, rw, rh);
+      ctx.setLineDash([]);
+    }
+
+    // ── Current satellite position ───────────────────────────────
     try {
       const pv = satellite.propagate(rec.satrec, now);
       if (pv && typeof pv.position !== "boolean" && pv.position) {
@@ -232,7 +290,6 @@ export default function SatelliteTracker2D() {
         const lon  = satellite.degreesLong(gd.longitude);
         const cx   = lonToX(lon, W), cy = latToY(lat, H);
 
-        // Crosshairs
         ctx.strokeStyle = `${color}40`;
         ctx.lineWidth   = 0.5;
         ctx.setLineDash([3, 4]);
@@ -240,14 +297,12 @@ export default function SatelliteTracker2D() {
         ctx.beginPath(); ctx.moveTo(0, cy);  ctx.lineTo(W, cy); ctx.stroke();
         ctx.setLineDash([]);
 
-        // Glow ring
         const grad = ctx.createRadialGradient(cx, cy, 3, cx, cy, 18);
         grad.addColorStop(0, `${color}70`);
         grad.addColorStop(1, `${color}00`);
         ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2);
         ctx.fillStyle = grad; ctx.fill();
 
-        // Dot
         ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2);
         ctx.fillStyle   = color;
         ctx.shadowColor = color;
@@ -255,7 +310,6 @@ export default function SatelliteTracker2D() {
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Name label
         ctx.font      = `bold ${Math.max(10, Math.min(13, W * 0.013))}px monospace`;
         ctx.fillStyle = color;
         ctx.fillText(rec.name, cx + 8, cy - 8);
@@ -272,23 +326,20 @@ export default function SatelliteTracker2D() {
     } catch { /**/ }
 
     animRef.current = requestAnimationFrame(draw);
-  }, []); // stable — uses refs only
+  }, []);
 
-  // Load world data + start loop
   useEffect(() => {
     const canvas    = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
 
     const setup = async () => {
-      // Dynamic import avoids SSR issues with the large JSON
       const worldData = (await import("world-atlas/countries-110m.json")) as unknown as Topology<Objects>;
 
       const resize = () => {
         canvas.width  = container.clientWidth;
         canvas.height = container.clientHeight;
-        // Rebuild world offscreen canvas at new size
-        worldRef.current  = buildWorldCanvas(canvas.width, canvas.height, worldData);
+        worldRef.current      = buildWorldCanvas(canvas.width, canvas.height, worldData);
         trackCacheRef.current = null;
       };
       resize();
@@ -307,12 +358,80 @@ export default function SatelliteTracker2D() {
     return () => { cleanup?.(); cancelAnimationFrame(animRef.current); };
   }, [draw]);
 
+  // ── Canvas mouse handlers for AOI drawing ───────────────────
+  const getCanvasPos = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width)  * canvas.width,
+      y: ((e.clientY - rect.top)  / rect.height) * canvas.height,
+    };
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!drawModeRef.current) return;
+    const pos = getCanvasPos(e);
+    dragStartRef.current = pos;
+    dragCurRef.current   = pos;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!dragStartRef.current) return;
+    dragCurRef.current = getCanvasPos(e);
+  };
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!dragStartRef.current || !drawModeRef.current) return;
+    const end = getCanvasPos(e);
+    const canvas = canvasRef.current!;
+    const W = canvas.width, H = canvas.height;
+    const start = dragStartRef.current;
+
+    const newAoi: Aoi = {
+      lat1: yToLat(start.y, H), lon1: xToLon(start.x, W),
+      lat2: yToLat(end.y,   H), lon2: xToLon(end.x,   W),
+    };
+    aoiRef.current    = newAoi;
+    dragStartRef.current = null;
+    dragCurRef.current   = null;
+
+    const passMin = computeNextPass(SATRECORDS[selectedRef.current].satrec, newAoi, new Date());
+    setAoi({ ...newAoi, nextPassMin: passMin });
+    setDrawMode(false);
+  };
+
+  const clearAoi = () => {
+    aoiRef.current = null;
+    setAoi(null);
+  };
+
+  // Recompute next pass when satellite changes (if AOI exists)
+  useEffect(() => {
+    if (!aoiRef.current) return;
+    const passMin = computeNextPass(SATRECORDS[selectedIdx].satrec, aoiRef.current, new Date());
+    setAoi((prev) => prev ? { ...prev, nextPassMin: passMin } : null);
+  }, [selectedIdx]);
+
+  const aoiBounds = aoi ? {
+    minLat: Math.min(aoi.lat1, aoi.lat2).toFixed(1),
+    maxLat: Math.max(aoi.lat1, aoi.lat2).toFixed(1),
+    minLon: Math.min(aoi.lon1, aoi.lon2).toFixed(1),
+    maxLon: Math.max(aoi.lon1, aoi.lon2).toFixed(1),
+  } : null;
+
   return (
     <div ref={containerRef} className="relative w-full h-full select-none">
-      <canvas ref={canvasRef} className="w-full h-full" />
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full"
+        style={{ cursor: drawMode ? "crosshair" : "default" }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+      />
 
-      {/* Satellite selector dropdown */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
+      {/* Satellite selector + AOI button row */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
         <select
           value={selectedIdx}
           onChange={(e) => setSelectedIdx(Number(e.target.value))}
@@ -332,7 +451,74 @@ export default function SatelliteTracker2D() {
             </option>
           ))}
         </select>
+
+        <button
+          onClick={() => {
+            if (aoi) { clearAoi(); return; }
+            setDrawMode((m) => !m);
+          }}
+          style={{
+            background:     drawMode ? "rgba(0,212,255,0.18)" : "rgba(13,27,46,0.92)",
+            border:         drawMode ? "1px solid #00d4ff" : "1px solid var(--border)",
+            color:          drawMode ? "#00d4ff" : "var(--muted)",
+            fontFamily:     "var(--font-geist-mono)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+          }}
+          className="text-xs px-3 py-2 rounded-lg whitespace-nowrap"
+        >
+          {aoi ? "✕ Clear AOI" : drawMode ? "Drawing…" : "Draw AOI"}
+        </button>
       </div>
+
+      {/* AOI info panel */}
+      {aoi && aoiBounds && (
+        <div
+          style={{
+            background:     "rgba(13,27,46,0.92)",
+            border:         "1px solid #00d4ff60",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+          }}
+          className="absolute top-14 right-4 px-4 py-3 rounded-xl text-xs font-mono space-y-1.5 min-w-[200px]"
+        >
+          <div style={{ color: "#00d4ff" }} className="font-bold text-sm mb-2">Area of Interest</div>
+          {[
+            ["Lat",  `${aoiBounds.minLat}° – ${aoiBounds.maxLat}°`],
+            ["Lon",  `${aoiBounds.minLon}° – ${aoiBounds.maxLon}°`],
+          ].map(([k, v]) => (
+            <div key={k} className="flex justify-between gap-4">
+              <span style={{ color: "var(--muted)" }}>{k}</span>
+              <span style={{ color: "var(--text)" }}>{v}</span>
+            </div>
+          ))}
+          <div style={{ borderTop: "1px solid var(--border)" }} className="pt-1.5">
+            <div className="flex justify-between gap-4">
+              <span style={{ color: "var(--muted)" }}>Next pass</span>
+              <span style={{ color: aoi.nextPassMin ? "#00d4ff" : "#ef4444", fontWeight: 600 }}>
+                {aoi.nextPassMin ? `in ${fmtMinutes(aoi.nextPassMin)}` : "none in 24 h"}
+              </span>
+            </div>
+            <div style={{ color: "var(--muted)", fontSize: 9, marginTop: 4 }}>
+              mocked · SGP4 propagation
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Draw-mode hint */}
+      {drawMode && (
+        <div
+          style={{
+            background:     "rgba(0,212,255,0.12)",
+            border:         "1px solid #00d4ff50",
+            backdropFilter: "blur(8px)",
+          }}
+          className="absolute bottom-16 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-xs font-mono"
+        >
+          <span style={{ color: "#00d4ff" }}>Click and drag to select an area</span>
+        </div>
+      )}
 
       {/* Live telemetry */}
       {info && (
@@ -376,6 +562,10 @@ export default function SatelliteTracker2D() {
         <div className="flex items-center gap-2">
           <div style={{ width: 22, height: 2, background: `${SATRECORDS[selectedIdx].color}c0` }} />
           <span style={{ color: "var(--muted)" }}>next 90 min</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div style={{ width: 22, height: 2, background: "#00d4ff", borderStyle: "dashed" }} />
+          <span style={{ color: "var(--muted)" }}>AOI boundary</span>
         </div>
       </div>
     </div>
