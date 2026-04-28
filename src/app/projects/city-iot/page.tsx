@@ -28,15 +28,33 @@ interface Device {
 }
 
 const TYPE_META: Record<DeviceType, { icon: string; unit: string; min: number; max: number; warnAt: number; alertAt: number; color: string }> = {
-  air:     { icon: "💨", unit: "AQI",  min: 10,  max: 200, warnAt: 100, alertAt: 150, color: "#06b6d4" },
-  traffic: { icon: "🚗", unit: "veh/h", min: 50, max: 1200, warnAt: 900, alertAt: 1100, color: "#f59e0b" },
-  energy:  { icon: "⚡", unit: "kW",   min: 5,   max: 500, warnAt: 400, alertAt: 470,  color: "#a78bfa" },
-  cctv:    { icon: "📹", unit: "fps",  min: 24,  max: 30,  warnAt: 26,  alertAt: 24,   color: "#10b981" },
-  noise:   { icon: "🔊", unit: "dB",   min: 30,  max: 90,  warnAt: 70,  alertAt: 80,   color: "#ef4444" },
+  air:     { icon: "💨", unit: "AQI",   min: 10,  max: 200,  warnAt: 100, alertAt: 150, color: "#06b6d4" },
+  traffic: { icon: "🚗", unit: "veh/h", min: 50,  max: 1200, warnAt: 900, alertAt: 1100, color: "#f59e0b" },
+  energy:  { icon: "⚡", unit: "kW",    min: 5,   max: 500,  warnAt: 400, alertAt: 470,  color: "#a78bfa" },
+  cctv:    { icon: "📹", unit: "fps",   min: 24,  max: 30,   warnAt: 26,  alertAt: 24,   color: "#10b981" },
+  noise:   { icon: "🔊", unit: "dB",    min: 30,  max: 90,   warnAt: 70,  alertAt: 80,   color: "#ef4444" },
 };
 
-// City center: London
 const CENTER = { lat: 51.505, lon: -0.09 };
+const LAT_RANGE = 0.12;
+const LON_RANGE = 0.18;
+const TILE_ZOOM = 14;
+
+// ── OSM tile helpers (Web Mercator) ─────────────────────────────
+function latLonToTile(lat: number, lon: number, z: number) {
+  const n = Math.pow(2, z);
+  const tx = Math.floor(((lon + 180) / 360) * n);
+  const latRad = (lat * Math.PI) / 180;
+  const ty = Math.floor(((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n);
+  return { tx, ty };
+}
+
+function tileTopLeft(tx: number, ty: number, z: number) {
+  const n = Math.pow(2, z);
+  const lon = (tx / n) * 360 - 180;
+  const latRad = Math.atan(Math.sinh(Math.PI * (1 - (2 * ty) / n)));
+  return { lat: (latRad * 180) / Math.PI, lon };
+}
 
 function generateDevices(count: number): Device[] {
   const types: DeviceType[] = ["air", "traffic", "energy", "cctv", "noise"];
@@ -48,8 +66,8 @@ function generateDevices(count: number): Device[] {
     return {
       id: i,
       type,
-      lat: CENTER.lat + (Math.random() - 0.5) * 0.1,
-      lon: CENTER.lon + (Math.random() - 0.5) * 0.15,
+      lat: CENTER.lat + (Math.random() - 0.5) * LAT_RANGE * 0.9,
+      lon: CENTER.lon + (Math.random() - 0.5) * LON_RANGE * 0.9,
       value: parseFloat(value.toFixed(1)),
       unit: meta.unit,
       status,
@@ -61,17 +79,39 @@ function generateDevices(count: number): Device[] {
 const STATUS_COLORS = { ok: "#10b981", warn: "#f59e0b", alert: "#ef4444" };
 
 export default function CityIoTPage() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [selected, setSelected] = useState<Device | null>(null);
-  const [filter, setFilter] = useState<DeviceType | "all">("all");
-const animRef = useRef<number>(0);
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
+  const animRef     = useRef<number>(0);
+  const tileImgRef  = useRef<Map<string, HTMLImageElement>>(new Map());
 
+  const [devices,    setDevices]    = useState<Device[]>([]);
+  const [selected,   setSelected]   = useState<Device | null>(null);
+  const [filter,     setFilter]     = useState<DeviceType | "all">("all");
+  const [tilesTick,  setTilesTick]  = useState(0);
+
+  useEffect(() => { setDevices(generateDevices(200)); }, []);
+
+  // Load OSM tiles covering the viewport once
   useEffect(() => {
-    setDevices(generateDevices(200));
+    const minLat = CENTER.lat - LAT_RANGE / 2;
+    const maxLat = CENTER.lat + LAT_RANGE / 2;
+    const minLon = CENTER.lon - LON_RANGE / 2;
+    const maxLon = CENTER.lon + LON_RANGE / 2;
+    const { tx: txMin, ty: tyMin } = latLonToTile(maxLat, minLon, TILE_ZOOM);
+    const { tx: txMax, ty: tyMax } = latLonToTile(minLat, maxLon, TILE_ZOOM);
+    for (let tx = txMin; tx <= txMax; tx++) {
+      for (let ty = tyMin; ty <= tyMax; ty++) {
+        const key = `${tx},${ty}`;
+        if (tileImgRef.current.has(key)) continue;
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => setTilesTick((n) => n + 1);
+        img.src = `https://tile.openstreetmap.org/${TILE_ZOOM}/${tx}/${ty}.png`;
+        tileImgRef.current.set(key, img);
+      }
+    }
   }, []);
 
-  // Update values
+  // Drift device values
   useEffect(() => {
     const interval = setInterval(() => {
       setDevices((prev) =>
@@ -87,17 +127,13 @@ const animRef = useRef<number>(0);
     return () => clearInterval(interval);
   }, []);
 
-  const latToY = useCallback((lat: number, H: number) => {
-    const range = 0.12;
-    return H - ((lat - (CENTER.lat - range / 2)) / range) * H;
-  }, []);
+  const latToY = useCallback((lat: number, H: number) =>
+    H - ((lat - (CENTER.lat - LAT_RANGE / 2)) / LAT_RANGE) * H, []);
 
-  const lonToX = useCallback((lon: number, W: number) => {
-    const range = 0.18;
-    return ((lon - (CENTER.lon - range / 2)) / range) * W;
-  }, []);
+  const lonToX = useCallback((lon: number, W: number) =>
+    ((lon - (CENTER.lon - LON_RANGE / 2)) / LON_RANGE) * W, []);
 
-  // Draw on canvas
+  // Draw
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || devices.length === 0) return;
@@ -109,10 +145,38 @@ const animRef = useRef<number>(0);
       const H = canvas.height;
       ctx.clearRect(0, 0, W, H);
 
-      // Background grid
+      // ── Background fallback ──────────────────────────────────────
       ctx.fillStyle = "#0d1b2e";
       ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = "#1e3a5f";
+
+      // ── OSM tiles ────────────────────────────────────────────────
+      const minLat = CENTER.lat - LAT_RANGE / 2;
+      const maxLat = CENTER.lat + LAT_RANGE / 2;
+      const minLon = CENTER.lon - LON_RANGE / 2;
+      const maxLon = CENTER.lon + LON_RANGE / 2;
+      const { tx: txMin, ty: tyMin } = latLonToTile(maxLat, minLon, TILE_ZOOM);
+      const { tx: txMax, ty: tyMax } = latLonToTile(minLat, maxLon, TILE_ZOOM);
+
+      for (let tx = txMin; tx <= txMax; tx++) {
+        for (let ty = tyMin; ty <= tyMax; ty++) {
+          const img = tileImgRef.current.get(`${tx},${ty}`);
+          if (!img?.complete || !img.naturalWidth) continue;
+          const tl = tileTopLeft(tx, ty, TILE_ZOOM);
+          const br = tileTopLeft(tx + 1, ty + 1, TILE_ZOOM);
+          const dx = lonToX(tl.lon, W);
+          const dy = latToY(tl.lat, H);
+          const dw = lonToX(br.lon, W) - dx;
+          const dh = latToY(br.lat, H) - dy;
+          try { ctx.drawImage(img, dx, dy, dw, dh); } catch { /**/ }
+        }
+      }
+
+      // ── Dark overlay so sensor dots stay readable ────────────────
+      ctx.fillStyle = "rgba(2,10,26,0.52)";
+      ctx.fillRect(0, 0, W, H);
+
+      // ── Subtle grid ──────────────────────────────────────────────
+      ctx.strokeStyle = "rgba(30,58,95,0.25)";
       ctx.lineWidth = 0.5;
       for (let x = 0; x < W; x += 40) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
@@ -121,14 +185,13 @@ const animRef = useRef<number>(0);
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
       }
 
-      // Devices
+      // ── Devices ──────────────────────────────────────────────────
       const visible = filter === "all" ? devices : devices.filter((d) => d.type === filter);
       visible.forEach((d) => {
         const x = lonToX(d.lon, W);
         const y = latToY(d.lat, H);
         const color = STATUS_COLORS[d.status];
 
-        // Pulse for alert
         if (d.status === "alert") {
           ctx.beginPath();
           ctx.arc(x, y, 14, 0, Math.PI * 2);
@@ -139,21 +202,25 @@ const animRef = useRef<number>(0);
         ctx.beginPath();
         ctx.arc(x, y, d.status === "alert" ? 7 : 5, 0, Math.PI * 2);
         ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = d.status === "alert" ? 10 : 4;
         ctx.fill();
+        ctx.shadowBlur = 0;
 
         if (selected?.id === d.id) {
           ctx.beginPath();
-          ctx.arc(x, y, 10, 0, Math.PI * 2);
+          ctx.arc(x, y, 11, 0, Math.PI * 2);
           ctx.strokeStyle = "#ffffff";
           ctx.lineWidth = 2;
           ctx.stroke();
         }
       });
     };
+
     draw();
     animRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animRef.current);
-  }, [devices, filter, selected, latToY, lonToX]);
+  }, [devices, filter, selected, latToY, lonToX, tilesTick]);
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -236,11 +303,14 @@ const animRef = useRef<number>(0);
                 onClick={handleCanvasClick}
                 style={{ cursor: "crosshair" }}
               />
+              {/* Map attribution */}
+              <div style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>
+                © OpenStreetMap contributors
+              </div>
             </div>
 
             {/* Sidebar */}
             <div className="w-56 flex flex-col gap-3">
-              {/* Legend */}
               <div style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
                 className="rounded-xl p-3 text-xs font-mono">
                 <div style={{ color: "var(--text)" }} className="font-semibold mb-2">Device Types</div>
@@ -252,7 +322,6 @@ const animRef = useRef<number>(0);
                 ))}
               </div>
 
-              {/* Selected device */}
               {selected ? (
                 <div
                   style={{ background: "var(--surface)", border: `1px solid ${STATUS_COLORS[selected.status]}` }}
@@ -268,7 +337,7 @@ const animRef = useRef<number>(0);
                   </div>
                 </div>
               ) : (
-                <div style={{ border: "1px dashed var(--border)" }} className="rounded-xl p-3 text-xs text-center" >
+                <div style={{ border: "1px dashed var(--border)" }} className="rounded-xl p-3 text-xs text-center">
                   <p style={{ color: "var(--muted)" }}>Click a dot to inspect device</p>
                 </div>
               )}
