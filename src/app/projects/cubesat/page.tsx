@@ -7,7 +7,7 @@ import ProjectMetrics from "@/components/projects/ProjectMetrics";
 import ArchitectureDiagram from "@/components/projects/ArchitectureDiagram";
 import DemoTransition from "@/components/projects/DemoTransition";
 import ProjectNav from "@/components/projects/ProjectNav";
-import SatelliteTracker2DClient from "@/components/SatelliteTracker2DClient";
+import OrbitalMapClient from "@/components/maps/OrbitalMapClient";
 import { projectDetails, PROJECT_NAV_ORDER } from "@/lib/data/portfolio";
 
 const detail = projectDetails["cubesat"];
@@ -130,7 +130,7 @@ export default function CubeSatPage() {
         </div>
         <div className="flex-1 relative overflow-hidden">
           <div style={{ position: "absolute", inset: 0 }}>
-            <SatelliteTracker2DClient />
+            <OrbitalMapClient />
           </div>
         </div>
         <div
