@@ -230,7 +230,6 @@ function ProjectCard({
 export default function Projects() {
   return (
     <section
-      id="projects"
       className="py-24 px-4 sm:px-6"
       style={{ background: "var(--bg)" }}
     >
@@ -239,10 +238,10 @@ export default function Projects() {
           style={{ color: "var(--accent)", fontFamily: "var(--font-geist-mono)" }}
           className="text-xs tracking-widest uppercase mb-2"
         >
-          03 / projects
+          all projects
         </p>
         <h2 style={{ color: "var(--text)" }} className="text-3xl sm:text-4xl font-bold mb-12">
-          Selected Work
+          More Work
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
