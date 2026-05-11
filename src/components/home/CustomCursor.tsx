@@ -47,7 +47,7 @@ export default function CustomCursor() {
       ring.style.top       = `${ry}px`;
       ring.style.width     = hovering ? "56px" : "36px";
       ring.style.height    = hovering ? "56px" : "36px";
-      ring.style.borderColor = hovering ? "var(--accent)" : "rgba(0,212,255,0.35)";
+      ring.style.borderColor = hovering ? "var(--accent)" : "rgba(232,150,60,0.35)";
 
       rafId = requestAnimationFrame(loop);
     };
@@ -90,7 +90,7 @@ export default function CustomCursor() {
         style={{
           position: "fixed", zIndex: 9998,
           width: 36, height: 36, borderRadius: "50%",
-          border: "1px solid rgba(0,212,255,0.35)",
+          border: "1px solid rgba(232,150,60,0.35)",
           pointerEvents: "none",
           transform: "translate(-50%, -50%)",
           transition: "width 0.25s ease, height 0.25s ease, border-color 0.2s, opacity 0.2s",

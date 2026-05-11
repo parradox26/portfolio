@@ -61,7 +61,7 @@ export default function Contact() {
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "var(--border)")}
             >
               <div
-                style={{ background: "rgba(0,212,255,0.1)", border: "1px solid rgba(0,212,255,0.2)" }}
+                style={{ background: "rgba(232,150,60,0.1)", border: "1px solid rgba(232,150,60,0.2)" }}
                 className="p-2.5 rounded-lg"
               >
                 <Mail size={18} style={{ color: "var(--accent)" }} />

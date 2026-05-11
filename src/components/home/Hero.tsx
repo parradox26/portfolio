@@ -183,10 +183,10 @@ export default function Hero() {
                 pointerEvents: contentOp > 0.5 ? "auto" : "none",
               }}
             >
-              <span style={{ background: "rgba(0,212,255,0.1)", border: "1px solid rgba(0,212,255,0.3)", color: "var(--accent)" }} className="text-xs font-mono px-3 py-1 rounded-full">
+              <span style={{ background: "rgba(232,150,60,0.1)", border: "1px solid rgba(232,150,60,0.3)", color: "var(--accent)" }} className="text-xs font-mono px-3 py-1 rounded-full">
                 {personal.yearsExperience} Years Experience
               </span>
-              <span style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.3)", color: "#c4b5fd" }} className="text-xs font-mono px-3 py-1 rounded-full">
+              <span style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.3)", color: "#a78bfa" }} className="text-xs font-mono px-3 py-1 rounded-full">
                 {personal.subtitle}
               </span>
             </div>
@@ -266,7 +266,7 @@ export default function Hero() {
               <a
                 href="#projects"
                 onClick={(e) => { e.preventDefault(); document.getElementById("projects")?.scrollIntoView({ behavior: "smooth" }); }}
-                style={{ background: "var(--accent)", color: "#050a14" }}
+                style={{ background: "var(--accent)", color: "#09090a" }}
                 className="px-6 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity"
               >
                 View Projects

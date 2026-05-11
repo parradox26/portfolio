@@ -6,11 +6,11 @@ import { ArrowUpRight, ExternalLink } from "lucide-react";
 
 // Tag palette — same system as About
 const TAG_PALETTE = [
-  { bg: "rgba(0,212,255,0.08)",   text: "#67e8f9", border: "rgba(0,212,255,0.2)" },
-  { bg: "rgba(124,58,237,0.08)",  text: "#c4b5fd", border: "rgba(124,58,237,0.2)" },
-  { bg: "rgba(16,185,129,0.08)",  text: "#6ee7b7", border: "rgba(16,185,129,0.2)" },
-  { bg: "rgba(251,191,36,0.08)",  text: "#fbbf24", border: "rgba(251,191,36,0.2)" },
-  { bg: "rgba(6,182,212,0.08)",   text: "#22d3ee", border: "rgba(6,182,212,0.2)" },
+  { bg: "rgba(232,150,60,0.08)",  text: "#e8963c", border: "rgba(232,150,60,0.2)"  },
+  { bg: "rgba(139,92,246,0.08)",  text: "#a78bfa", border: "rgba(139,92,246,0.2)"  },
+  { bg: "rgba(52,211,153,0.08)",  text: "#6ee7b7", border: "rgba(52,211,153,0.2)"  },
+  { bg: "rgba(251,191,36,0.08)",  text: "#fbbf24", border: "rgba(251,191,36,0.2)"  },
+  { bg: "rgba(129,140,248,0.08)", text: "#a5b4fc", border: "rgba(129,140,248,0.2)" },
 ];
 
 function tagStyle(index: number) {
@@ -41,9 +41,9 @@ function ProjectCard({
       >
         <div
           style={{
-            background: "linear-gradient(135deg, rgba(0,212,255,0.06) 0%, rgba(13,27,46,1) 60%)",
-            border: "1px solid rgba(0,212,255,0.4)",
-            boxShadow: "0 0 40px rgba(0,212,255,0.08)",
+            background: "linear-gradient(135deg, rgba(232,150,60,0.06) 0%, rgba(17,17,19,1) 60%)",
+            border: "1px solid rgba(232,150,60,0.4)",
+            boxShadow: "0 0 40px rgba(232,150,60,0.08)",
           }}
           className="rounded-2xl p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6 items-center"
         >
@@ -52,9 +52,9 @@ function ProjectCard({
               <span className="text-2xl">🛰️</span>
               <span
                 style={{
-                  background: "rgba(0,212,255,0.15)",
+                  background: "rgba(232,150,60,0.15)",
                   color: "var(--accent)",
-                  border: "1px solid rgba(0,212,255,0.4)",
+                  border: "1px solid rgba(232,150,60,0.4)",
                 }}
                 className="text-[10px] font-mono px-3 py-1 rounded-full flex items-center gap-1.5"
               >
@@ -88,7 +88,7 @@ function ProjectCard({
             {project.link && (
               <Link
                 href={project.link}
-                style={{ background: "var(--accent)", color: "#050a14" }}
+                style={{ background: "var(--accent)", color: "#09090a" }}
                 className="self-start flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -109,9 +109,9 @@ function ProjectCard({
                   width: 160,
                   height: 160,
                   borderRadius: "50%",
-                  background: "radial-gradient(circle at 35% 35%, #112240, #050a14)",
-                  border: "1px solid rgba(0,212,255,0.3)",
-                  boxShadow: "0 0 60px rgba(0,212,255,0.15)",
+                  background: "radial-gradient(circle at 35% 35%, #17171a, #09090a)",
+                  border: "1px solid rgba(232,150,60,0.3)",
+                  boxShadow: "0 0 60px rgba(232,150,60,0.12)",
                 }}
               />
               {/* Orbit rings */}
@@ -125,7 +125,7 @@ function ProjectCard({
                     width: size,
                     height: size,
                     borderRadius: "50%",
-                    border: `1px solid rgba(0,212,255,${0.15 - i * 0.04})`,
+                    border: `1px solid rgba(232,150,60,${0.15 - i * 0.04})`,
                     transform: `translate(-50%, -50%) rotateX(${60 + i * 10}deg)`,
                   }}
                 />

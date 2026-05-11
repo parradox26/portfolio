@@ -6,11 +6,11 @@ import { projects } from "@/lib/data/portfolio";
 const FEATURED = projects.filter((p) => p.link).slice(0, 5);
 
 const CARD_COLORS = [
-  { accent: "#00d4ff", glow: "rgba(0,212,255,0.12)",  border: "rgba(0,212,255,0.25)"  },
-  { accent: "#a78bfa", glow: "rgba(167,139,250,0.12)", border: "rgba(167,139,250,0.25)" },
-  { accent: "#10b981", glow: "rgba(16,185,129,0.12)",  border: "rgba(16,185,129,0.25)"  },
-  { accent: "#f59e0b", glow: "rgba(245,158,11,0.12)",  border: "rgba(245,158,11,0.25)"  },
-  { accent: "#06b6d4", glow: "rgba(6,182,212,0.12)",   border: "rgba(6,182,212,0.25)"   },
+  { accent: "#e8963c", glow: "rgba(232,150,60,0.10)",  border: "rgba(232,150,60,0.22)"  },
+  { accent: "#a78bfa", glow: "rgba(167,139,250,0.10)", border: "rgba(167,139,250,0.22)" },
+  { accent: "#34d399", glow: "rgba(52,211,153,0.10)",  border: "rgba(52,211,153,0.22)"  },
+  { accent: "#fb923c", glow: "rgba(251,146,60,0.10)",  border: "rgba(251,146,60,0.22)"  },
+  { accent: "#818cf8", glow: "rgba(129,140,248,0.10)", border: "rgba(129,140,248,0.22)" },
 ];
 
 export default function HorizontalProjects() {

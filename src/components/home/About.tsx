@@ -2,18 +2,16 @@
 import { personal, skills } from "@/lib/data/portfolio";
 import { useInView } from "@/hooks/useInView";
 
-// Each category gets its own color slot — variations on the design system palette,
-// staying in cool blue-cyan-purple tones (no rainbow).
 const PALETTE = [
-  { bg: "rgba(0,212,255,0.10)",   text: "#67e8f9", border: "rgba(0,212,255,0.25)" },   // Languages
-  { bg: "rgba(124,58,237,0.12)",  text: "#c4b5fd", border: "rgba(124,58,237,0.28)" },  // GenAI
-  { bg: "rgba(16,185,129,0.10)",  text: "#6ee7b7", border: "rgba(16,185,129,0.25)" },  // ML
-  { bg: "rgba(0,212,255,0.07)",   text: "#00d4ff", border: "rgba(0,212,255,0.20)" },   // Frontend
-  { bg: "rgba(251,191,36,0.10)",  text: "#fbbf24", border: "rgba(251,191,36,0.25)" },  // Cloud
-  { bg: "rgba(6,182,212,0.10)",   text: "#22d3ee", border: "rgba(6,182,212,0.25)" },   // Databases
-  { bg: "rgba(196,181,253,0.08)", text: "#a78bfa", border: "rgba(167,139,250,0.22)" }, // Messaging
-  { bg: "rgba(124,58,237,0.07)",  text: "#ddd6fe", border: "rgba(124,58,237,0.20)" },  // DevOps
-  { bg: "rgba(16,185,129,0.07)",  text: "#34d399", border: "rgba(16,185,129,0.20)" },  // Architecture
+  { bg: "rgba(232,150,60,0.10)",  text: "#e8963c", border: "rgba(232,150,60,0.25)"  },  // Languages
+  { bg: "rgba(139,92,246,0.12)",  text: "#a78bfa", border: "rgba(139,92,246,0.28)"  },  // GenAI
+  { bg: "rgba(52,211,153,0.10)",  text: "#6ee7b7", border: "rgba(52,211,153,0.25)"  },  // ML
+  { bg: "rgba(232,150,60,0.07)",  text: "#fdba74", border: "rgba(232,150,60,0.20)"  },  // Frontend
+  { bg: "rgba(251,191,36,0.10)",  text: "#fbbf24", border: "rgba(251,191,36,0.25)"  },  // Cloud
+  { bg: "rgba(129,140,248,0.10)", text: "#a5b4fc", border: "rgba(129,140,248,0.25)" },  // Databases
+  { bg: "rgba(167,139,250,0.08)", text: "#c4b5fd", border: "rgba(167,139,250,0.22)" },  // Messaging
+  { bg: "rgba(139,92,246,0.07)",  text: "#ddd6fe", border: "rgba(139,92,246,0.20)"  },  // DevOps
+  { bg: "rgba(52,211,153,0.07)",  text: "#34d399", border: "rgba(52,211,153,0.20)"  },  // Architecture
 ];
 
 export default function About() {
